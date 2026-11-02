@@ -1,11 +1,6 @@
 // ignore_for_file: avoid_print
 
-import 'dart:isolate';
-
-import 'package:bcrypt/bcrypt.dart';
 import 'package:dio/dio.dart';
-
-const _passwordSaltRounds = 10;
 
 // Configuration
 const _apiBaseUrl = 'https://zimobhtejidbcsrujhxd.supabase.co/rest/v1';
@@ -44,6 +39,18 @@ abstract final class CampaignPeriod {
   static const values = [daily, weekly, monthly];
 }
 
+/// 프로필 색상 코드 값. 서버가 새 값을 내려줄 수 있어 모델에서는 String 으로 받습니다.
+abstract final class ProfileColor {
+  static const red = 'red';
+  static const orange = 'orange';
+  static const yellow = 'yellow';
+  static const green = 'green';
+  static const blue = 'blue';
+  static const purple = 'purple';
+
+  static const values = [red, orange, yellow, green, blue, purple];
+}
+
 class Company {
   const Company({required this.id, required this.name, required this.createdAt});
 
@@ -61,26 +68,28 @@ class Company {
 class User {
   const User({
     required this.id,
-    required this.email,
+    required this.nickname,
     required this.name,
-    required this.password,
+    required this.profileColor,
     required this.createdAt,
     required this.updatedAt,
   });
 
   factory User.fromJson(Map<String, dynamic> json) => User(
         id: json['id'] as int,
-        email: json['email'] as String,
+        nickname: json['nickname'] as String,
         name: json['name'] as String,
-        password: json['password'] as String,
+        profileColor: json['profile_color'] as String,
         createdAt: json['created_at'] as String,
         updatedAt: json['updated_at'] as String,
       );
 
   final int id;
-  final String email;
+  final String nickname;
   final String name;
-  final String password;
+
+  /// [ProfileColor] 의 값
+  final String profileColor;
   final String createdAt;
   final String updatedAt;
 }
@@ -142,16 +151,18 @@ class CompanyInput {
 
 /// create / update 요청 body. null 인 필드는 전송하지 않습니다. (web 의 `Partial<User>`)
 class UserInput {
-  const UserInput({this.email, this.name, this.password});
+  const UserInput({this.nickname, this.name, this.profileColor});
 
-  final String? email;
+  final String? nickname;
   final String? name;
-  final String? password;
+
+  /// [ProfileColor] 의 값
+  final String? profileColor;
 
   Map<String, dynamic> toJson() => {
-        if (email != null) 'email': email,
+        if (nickname != null) 'nickname': nickname,
         if (name != null) 'name': name,
-        if (password != null) 'password': password,
+        if (profileColor != null) 'profile_color': profileColor,
       };
 }
 
@@ -513,36 +524,19 @@ class UsersApi {
 
   Future<User?> getById(int id) => _client.getById(_endpoint, id, User.fromJson);
 
-  /// password 는 bcrypt 로 해시해서 저장합니다.
-  /// bcrypt 는 UTF-8 72바이트까지만 받으며, 넘으면 ArgumentError 가 발생합니다.
-  Future<List<User>> create(UserInput user) async =>
-      _client.post(_endpoint, await _withHashedPassword(user), User.fromJson);
+  Future<List<User>> create(UserInput user) =>
+      _client.post(_endpoint, user.toJson(), User.fromJson);
 
-  /// password 가 있으면 [create] 와 같이 bcrypt 로 해시해서 저장합니다.
-  Future<List<User>> update(int id, UserInput user) async =>
-      _client.put(_endpoint, await _withHashedPassword(user), User.fromJson, filters: {'id': id});
+  Future<List<User>> update(int id, UserInput user) =>
+      _client.put(_endpoint, user.toJson(), User.fromJson, filters: {'id': id});
 
-  Future<PaginatedResponse<User>> searchByEmail(String email, {QueryOptions options = const QueryOptions()}) =>
-      _client.get(_endpoint, User.fromJson, options: options.copyWith(filters: {'email': 'ilike.*$email*'}));
+  Future<PaginatedResponse<User>> searchByNickname(String nickname, {QueryOptions options = const QueryOptions()}) =>
+      _client.get(_endpoint, User.fromJson, options: options.copyWith(filters: {'nickname': 'ilike.*$nickname*'}));
 
   Future<PaginatedResponse<User>> searchByName(String name, {QueryOptions options = const QueryOptions()}) =>
       _client.get(_endpoint, User.fromJson, options: options.copyWith(filters: {'name': 'ilike.*$name*'}));
 
   Future<int> count() => _client.count(_endpoint);
-
-  static Future<Map<String, dynamic>> _withHashedPassword(UserInput user) async {
-    final json = user.toJson();
-    final password = user.password;
-    if (password != null && password.isNotEmpty) {
-      json['password'] = await _hashPassword(password);
-    }
-    return json;
-  }
-
-  // bcrypt 는 CPU 를 오래 쓰므로 UI isolate 를 막지 않도록 별도 isolate 에서 실행
-  static Future<String> _hashPassword(String password) => Isolate.run(
-        () => BCrypt.hashpw(password, BCrypt.gensalt(logRounds: _passwordSaltRounds)),
-      );
 }
 
 /// 캠페인 목록 필터.
@@ -705,9 +699,9 @@ final filtered = await supabaseApi.campaigns.getAll(
 // Filter keys & values
 final filters = await supabaseApi.campaigns.getFilters();
 
-// Create user (password is hashed with bcrypt before sending)
+// Create user
 final created = await supabaseApi.users.create(
-  const UserInput(email: 'user@wisebirds.ai', name: '홍길동', password: 'Abcd1234!'),
+  const UserInput(nickname: 'gildong01', name: '홍길동', profileColor: ProfileColor.blue),
 );
 
 // Update campaign
