@@ -50,7 +50,7 @@ flutter run
 **화면 기획서**
 
 - 모바일 화면 디자인: [mobile_assignment Figma](https://www.figma.com/design/xZx1pmU04qPKuv98oHoEKz/mobile_assignment?node-id=0-1) — 화면별 번호와 Description 이 아래 명세와 같습니다.
-- 참고: [web 과제 Figma (기능 원본)](https://www.figma.com/design/6rjgLOPHhI48AekufTc7dY/frontend_assignment?node-id=0-1&t=R2GCfWkkp2aTIVL3-1)
+- 참고: [web 과제 Figma (기능 원본)](https://www.figma.com/design/fHMM8Puv2MzHEDQu7FaD16/frontend_assignment?node-id=0-1)
 
 #### 1. 공통 레이아웃
 
